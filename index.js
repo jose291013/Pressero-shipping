@@ -8,13 +8,12 @@ app.use(express.json());
 
 // === Handler de test pour le webhook ===
 app.post('/webhook', (req, res) => {
-  // Affiche ce qu'on reçoit pour debug
   console.log('Reçu:', JSON.stringify(req.body, null, 2));
 
-  // Renvoie un tarif fixe de 9,99 €
+  // On garde ServiceCode sur "External" mais on renomme Carrier
   res.json({
-    Carrier:      "External",
-    ServiceCode:  "External",
+    Carrier:      "DHL test",   // c'est ce qu’on verra dans l’UI
+    ServiceCode:  "External",   // doit rester External pour matcher
     TotalCost:    9.99,
     Messages:     [],
     Packages: [
@@ -32,7 +31,7 @@ app.post('/webhook', (req, res) => {
           PackageCost:    "9.99",
           TotalOrderCost: "9.99",
           CurrencyCode:   req.body.packagesinfo?.[0]?.currencycode || "EUR",
-          Items:          []  // ou mappe ton items si besoin
+          Items:          []
         },
         CanShip:       true,
         Messages:      [],
@@ -43,6 +42,7 @@ app.post('/webhook', (req, res) => {
     ]
   });
 });
+
 
 // Tu peux laisser le GET pour valider que le service est bien live
 app.get('/', (_, res) =>
