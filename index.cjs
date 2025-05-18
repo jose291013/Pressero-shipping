@@ -1,7 +1,7 @@
 // index.js
 // Supprimer les variables DEBUG pour éviter path-to-regexp errors
-delete process.env.DEBUG;
-delete process.env.DEBUG_URL;
+process.env.DEBUG = '';
+process.env.DEBUG_URL = '';
 
 const express = require('express');
 const cors = require('cors');
