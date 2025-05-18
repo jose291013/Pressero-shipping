@@ -1,60 +1,126 @@
-// convertRateGrid.js
-import xlsx from 'xlsx';
+// index.js
+import express from 'express';
+import { createClient } from 'redis';
 import fs from 'fs';
+import path from 'path';
 
-// Extraction des utilitaires depuis le module commun
-const { decode_range, encode_cell } = xlsx.utils;
+const app = express();
+const PORT = process.env.PORT || 3000;
+const REDIS_URL = process.env.REDIS_URL;
 
-// 1. Lecture du classeur et de la première feuille
-const workbook = xlsx.readFile('rateGrid.xlsx');
-const sheet    = workbook.Sheets[workbook.SheetNames[0]];
+// Middleware pour JSON
+app.use(express.json());
 
-// 2. Détection de la plage utilisée dans la feuille
-const sheetRef = sheet['!ref'];
-const range    = decode_range(sheetRef);
+// Connexion Redis
+const redis = createClient({ url: REDIS_URL });
+redis.on('error', err => console.error('Redis error', err));
+await redis.connect();
 
-// 3. Lecture des limites de poids à la ligne 1 (indice 0), colonnes B jusqu'à la dernière
-const weightLimits = [];
-for (let col = range.s.c + 1; col <= range.e.c; col++) {
-  const addr = encode_cell({ r: 0, c: col });
-  const cell = sheet[addr];
-  if (cell && cell.v !== undefined && cell.v !== '') {
-    const limit = parseFloat(cell.v);
-    if (!isNaN(limit)) weightLimits.push(limit);
-  }
+// Chargement de la grille tarifaire
+const __dirname = path.dirname(new URL(import.meta.url).pathname);
+const gridPath = path.join(__dirname, 'rateGrid.json');
+let rateGrid = [];
+try {
+  const raw = fs.readFileSync(gridPath, 'utf8');
+  rateGrid = JSON.parse(raw);
+} catch (err) {
+  console.error('Erreur chargement rateGrid.json', err);
+  process.exit(1);
 }
 
-// 4. Lecture des prix à la ligne 9 (indice 8), mêmes colonnes
-const prices = [];
-for (let col = range.s.c + 1; col <= range.e.c; col++) {
-  const addr = encode_cell({ r: 8, c: col });
-  const cell = sheet[addr];
-  if (cell && cell.v !== undefined && cell.v !== '') {
-    const price = parseFloat(cell.v);
-    if (!isNaN(price)) prices.push(price);
+// Utilitaire pour trouver un tarif
+function findRate(carrier, prefix, weight) {
+  const rules = rateGrid.filter(r => r.carrier === carrier && (!r.postal_prefix || prefix.startsWith(r.postal_prefix)));
+  for (const r of rules) {
+    if (weight >= r.min_weight && weight <= r.max_weight) {
+      return r.flat_price != null ? r.flat_price : (weight * (r.price_per_kg || 0));
+    }
   }
+  return 0;
 }
 
-// 5. Construction de la grille tarifaire
-const rateGrid = [];
-let previousLimit = 0;
-for (let i = 0; i < weightLimits.length; i++) {
-  rateGrid.push({
-    carrier:       'DHL',             // Modifier si nécessaire
-    postal_prefix: '',                // À compléter manuellement ou en automatisant
-    min_weight:    previousLimit,
-    max_weight:    weightLimits[i],
-    flat_price:    prices[i] || 0,
-    price_per_kg:  null
+// Extrait le code postal d'une chaîne
+function extractPostal(addr) {
+  if (typeof addr === 'string') {
+    const m = addr.match(/\b(\d{5})\b/);
+    return m ? m[1] : '';
+  }
+  return addr.postal || '';
+}
+
+// Persister la liste de distribution
+app.post('/save-distribution', async (req, res) => {
+  const { distKey, distributionList } = req.body;
+  if (!distKey || !Array.isArray(distributionList)) {
+    return res.status(400).json({ error: 'distKey et distributionList requis' });
+  }
+  await redis.set(`dist:${distKey}`, JSON.stringify(distributionList), { EX: 7200 });
+  res.json({ status: 'ok', distKey });
+});
+
+// Webhook calcul tarifaire
+app.post('/webhook', async (req, res) => {
+  const { distKey, packagesinfo } = req.body;
+  // Récupération de la liste
+  let list = [];
+  if (distKey) {
+    const stored = await redis.get(`dist:${distKey}`);
+    if (stored) list = JSON.parse(stored);
+  }
+  // Fallback mono-adresse
+  if (!list.length && Array.isArray(packagesinfo)) {
+    list = [{ address: packagesinfo[0].to.postal || '', qty: 1 }];
+  }
+
+  // Poids unitaire
+  let unitWeight = null;
+  if (req.body.hdnTotalWeight && req.body.hdnTotalQty) {
+    unitWeight = parseFloat(req.body.hdnTotalWeight) / parseInt(req.body.hdnTotalQty, 10);
+  }
+
+  const carrier = 'DHL';
+  const prefixLen = 2;
+  let totalCost = 0;
+
+  const packages = list.map(entry => {
+    const qty = entry.qty;
+    const rawAddr = entry.address;
+    const postal = extractPostal(rawAddr);
+    const weight = unitWeight ? unitWeight * qty : 0;
+    const prefix = postal.slice(0, prefixLen);
+    const cost = findRate(carrier, prefix, weight);
+    totalCost += cost;
+
+    return {
+      Package: {
+        ID: null,
+        From: packagesinfo?.[0]?.from || {},
+        To: { Postal: postal },
+        Weight: weight.toFixed(3),
+        WeightUnit: 1,
+        PackageCost: cost.toFixed(2),
+        TotalOrderCost: cost.toFixed(2),
+        CurrencyCode: 'EUR',
+        Items: []
+      },
+      CanShip: true,
+      Messages: [],
+      Cost: cost,
+      DaysToDeliver: 2,
+      MISID: null
+    };
   });
-  previousLimit = weightLimits[i] + 0.0001;
-}
 
-// 6. Écriture du fichier JSON final
-fs.writeFileSync(
-  'rateGrid.json',
-  JSON.stringify(rateGrid, null, 2),
-  'utf8'
-);
-console.log(`✅ rateGrid.json généré avec ${rateGrid.length} tranches`);
+  res.json({
+    Carrier: 'DHL',
+    ServiceCode: 'External',
+    TotalCost: parseFloat(totalCost.toFixed(2)),
+    Messages: [],
+    Packages: packages
+  });
+});
+
+// Health check
+app.get('/', (_, res) => res.send('Service shipping opérationnel'));
+app.listen(PORT, () => console.log(`Listening on port ${PORT}`));
 
