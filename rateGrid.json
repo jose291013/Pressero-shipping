@@ -1,0 +1,794 @@
+[
+  {
+    "carrier": "DHL",
+    "postal_prefix": "",
+    "min_weight": 0,
+    "max_weight": 1,
+    "flat_price": 9.280700000000001,
+    "price_per_kg": null
+  },
+  {
+    "carrier": "DHL",
+    "postal_prefix": "",
+    "min_weight": 1.0001,
+    "max_weight": 2,
+    "flat_price": 9.695400000000001,
+    "price_per_kg": null
+  },
+  {
+    "carrier": "DHL",
+    "postal_prefix": "",
+    "min_weight": 2.0001,
+    "max_weight": 3,
+    "flat_price": 10.110100000000001,
+    "price_per_kg": null
+  },
+  {
+    "carrier": "DHL",
+    "postal_prefix": "",
+    "min_weight": 3.0001,
+    "max_weight": 4,
+    "flat_price": 10.524800000000003,
+    "price_per_kg": null
+  },
+  {
+    "carrier": "DHL",
+    "postal_prefix": "",
+    "min_weight": 4.0001,
+    "max_weight": 5,
+    "flat_price": 11.368500000000001,
+    "price_per_kg": null
+  },
+  {
+    "carrier": "DHL",
+    "postal_prefix": "",
+    "min_weight": 5.0001,
+    "max_weight": 6,
+    "flat_price": 11.797500000000001,
+    "price_per_kg": null
+  },
+  {
+    "carrier": "DHL",
+    "postal_prefix": "",
+    "min_weight": 6.0001,
+    "max_weight": 7,
+    "flat_price": 12.226500000000001,
+    "price_per_kg": null
+  },
+  {
+    "carrier": "DHL",
+    "postal_prefix": "",
+    "min_weight": 7.0001,
+    "max_weight": 8,
+    "flat_price": 13.227500000000001,
+    "price_per_kg": null
+  },
+  {
+    "carrier": "DHL",
+    "postal_prefix": "",
+    "min_weight": 8.0001,
+    "max_weight": 9,
+    "flat_price": 14.085500000000001,
+    "price_per_kg": null
+  },
+  {
+    "carrier": "DHL",
+    "postal_prefix": "",
+    "min_weight": 9.0001,
+    "max_weight": 10,
+    "flat_price": 15.229500000000003,
+    "price_per_kg": null
+  },
+  {
+    "carrier": "DHL",
+    "postal_prefix": "",
+    "min_weight": 10.0001,
+    "max_weight": 11,
+    "flat_price": 15.873000000000001,
+    "price_per_kg": null
+  },
+  {
+    "carrier": "DHL",
+    "postal_prefix": "",
+    "min_weight": 11.0001,
+    "max_weight": 12,
+    "flat_price": 16.5165,
+    "price_per_kg": null
+  },
+  {
+    "carrier": "DHL",
+    "postal_prefix": "",
+    "min_weight": 12.0001,
+    "max_weight": 13,
+    "flat_price": 17.160000000000004,
+    "price_per_kg": null
+  },
+  {
+    "carrier": "DHL",
+    "postal_prefix": "",
+    "min_weight": 13.0001,
+    "max_weight": 14,
+    "flat_price": 17.8035,
+    "price_per_kg": null
+  },
+  {
+    "carrier": "DHL",
+    "postal_prefix": "",
+    "min_weight": 14.0001,
+    "max_weight": 15,
+    "flat_price": 19.877,
+    "price_per_kg": null
+  },
+  {
+    "carrier": "DHL",
+    "postal_prefix": "",
+    "min_weight": 15.0001,
+    "max_weight": 16,
+    "flat_price": 20.520500000000002,
+    "price_per_kg": null
+  },
+  {
+    "carrier": "DHL",
+    "postal_prefix": "",
+    "min_weight": 16.0001,
+    "max_weight": 17,
+    "flat_price": 21.164,
+    "price_per_kg": null
+  },
+  {
+    "carrier": "DHL",
+    "postal_prefix": "",
+    "min_weight": 17.0001,
+    "max_weight": 18,
+    "flat_price": 21.807500000000005,
+    "price_per_kg": null
+  },
+  {
+    "carrier": "DHL",
+    "postal_prefix": "",
+    "min_weight": 18.0001,
+    "max_weight": 19,
+    "flat_price": 22.451,
+    "price_per_kg": null
+  },
+  {
+    "carrier": "DHL",
+    "postal_prefix": "",
+    "min_weight": 19.0001,
+    "max_weight": 20,
+    "flat_price": 23.0945,
+    "price_per_kg": null
+  },
+  {
+    "carrier": "DHL",
+    "postal_prefix": "",
+    "min_weight": 20.0001,
+    "max_weight": 21,
+    "flat_price": 23.738000000000003,
+    "price_per_kg": null
+  },
+  {
+    "carrier": "DHL",
+    "postal_prefix": "",
+    "min_weight": 21.0001,
+    "max_weight": 22,
+    "flat_price": 24.3815,
+    "price_per_kg": null
+  },
+  {
+    "carrier": "DHL",
+    "postal_prefix": "",
+    "min_weight": 22.0001,
+    "max_weight": 23,
+    "flat_price": 26.455000000000002,
+    "price_per_kg": null
+  },
+  {
+    "carrier": "DHL",
+    "postal_prefix": "",
+    "min_weight": 23.0001,
+    "max_weight": 24,
+    "flat_price": 27.098500000000005,
+    "price_per_kg": null
+  },
+  {
+    "carrier": "DHL",
+    "postal_prefix": "",
+    "min_weight": 24.0001,
+    "max_weight": 25,
+    "flat_price": 27.742,
+    "price_per_kg": null
+  },
+  {
+    "carrier": "DHL",
+    "postal_prefix": "",
+    "min_weight": 25.0001,
+    "max_weight": 26,
+    "flat_price": 28.385500000000008,
+    "price_per_kg": null
+  },
+  {
+    "carrier": "DHL",
+    "postal_prefix": "",
+    "min_weight": 26.0001,
+    "max_weight": 27,
+    "flat_price": 29.029000000000003,
+    "price_per_kg": null
+  },
+  {
+    "carrier": "DHL",
+    "postal_prefix": "",
+    "min_weight": 27.0001,
+    "max_weight": 28,
+    "flat_price": 29.672500000000003,
+    "price_per_kg": null
+  },
+  {
+    "carrier": "DHL",
+    "postal_prefix": "",
+    "min_weight": 28.0001,
+    "max_weight": 29,
+    "flat_price": 30.316000000000003,
+    "price_per_kg": null
+  },
+  {
+    "carrier": "DHL",
+    "postal_prefix": "",
+    "min_weight": 29.0001,
+    "max_weight": 30,
+    "flat_price": 30.959500000000002,
+    "price_per_kg": null
+  },
+  {
+    "carrier": "DHL",
+    "postal_prefix": "",
+    "min_weight": 30.0001,
+    "max_weight": 31,
+    "flat_price": 31.602999999999998,
+    "price_per_kg": null
+  },
+  {
+    "carrier": "DHL",
+    "postal_prefix": "",
+    "min_weight": 31.0001,
+    "max_weight": 32,
+    "flat_price": 33.6765,
+    "price_per_kg": null
+  },
+  {
+    "carrier": "DHL",
+    "postal_prefix": "",
+    "min_weight": 32.0001,
+    "max_weight": 33,
+    "flat_price": 34.32,
+    "price_per_kg": null
+  },
+  {
+    "carrier": "DHL",
+    "postal_prefix": "",
+    "min_weight": 33.0001,
+    "max_weight": 34,
+    "flat_price": 34.963499999999996,
+    "price_per_kg": null
+  },
+  {
+    "carrier": "DHL",
+    "postal_prefix": "",
+    "min_weight": 34.0001,
+    "max_weight": 35,
+    "flat_price": 35.607,
+    "price_per_kg": null
+  },
+  {
+    "carrier": "DHL",
+    "postal_prefix": "",
+    "min_weight": 35.0001,
+    "max_weight": 36,
+    "flat_price": 36.250499999999995,
+    "price_per_kg": null
+  },
+  {
+    "carrier": "DHL",
+    "postal_prefix": "",
+    "min_weight": 36.0001,
+    "max_weight": 37,
+    "flat_price": 36.894,
+    "price_per_kg": null
+  },
+  {
+    "carrier": "DHL",
+    "postal_prefix": "",
+    "min_weight": 37.0001,
+    "max_weight": 38,
+    "flat_price": 37.537499999999994,
+    "price_per_kg": null
+  },
+  {
+    "carrier": "DHL",
+    "postal_prefix": "",
+    "min_weight": 38.0001,
+    "max_weight": 39,
+    "flat_price": 38.18099999999999,
+    "price_per_kg": null
+  },
+  {
+    "carrier": "DHL",
+    "postal_prefix": "",
+    "min_weight": 39.0001,
+    "max_weight": 40,
+    "flat_price": 40.25449999999999,
+    "price_per_kg": null
+  },
+  {
+    "carrier": "DHL",
+    "postal_prefix": "",
+    "min_weight": 40.0001,
+    "max_weight": 41,
+    "flat_price": 40.897999999999996,
+    "price_per_kg": null
+  },
+  {
+    "carrier": "DHL",
+    "postal_prefix": "",
+    "min_weight": 41.0001,
+    "max_weight": 42,
+    "flat_price": 41.54149999999999,
+    "price_per_kg": null
+  },
+  {
+    "carrier": "DHL",
+    "postal_prefix": "",
+    "min_weight": 42.0001,
+    "max_weight": 43,
+    "flat_price": 42.18499999999999,
+    "price_per_kg": null
+  },
+  {
+    "carrier": "DHL",
+    "postal_prefix": "",
+    "min_weight": 43.0001,
+    "max_weight": 44,
+    "flat_price": 42.82849999999999,
+    "price_per_kg": null
+  },
+  {
+    "carrier": "DHL",
+    "postal_prefix": "",
+    "min_weight": 44.0001,
+    "max_weight": 45,
+    "flat_price": 43.47199999999999,
+    "price_per_kg": null
+  },
+  {
+    "carrier": "DHL",
+    "postal_prefix": "",
+    "min_weight": 45.0001,
+    "max_weight": 46,
+    "flat_price": 44.11549999999998,
+    "price_per_kg": null
+  },
+  {
+    "carrier": "DHL",
+    "postal_prefix": "",
+    "min_weight": 46.0001,
+    "max_weight": 47,
+    "flat_price": 44.758999999999986,
+    "price_per_kg": null
+  },
+  {
+    "carrier": "DHL",
+    "postal_prefix": "",
+    "min_weight": 47.0001,
+    "max_weight": 48,
+    "flat_price": 45.40249999999999,
+    "price_per_kg": null
+  },
+  {
+    "carrier": "DHL",
+    "postal_prefix": "",
+    "min_weight": 48.0001,
+    "max_weight": 49,
+    "flat_price": 47.475999999999985,
+    "price_per_kg": null
+  },
+  {
+    "carrier": "DHL",
+    "postal_prefix": "",
+    "min_weight": 49.0001,
+    "max_weight": 50,
+    "flat_price": 48.11949999999998,
+    "price_per_kg": null
+  },
+  {
+    "carrier": "DHL",
+    "postal_prefix": "",
+    "min_weight": 50.0001,
+    "max_weight": 51,
+    "flat_price": 48.762999999999984,
+    "price_per_kg": null
+  },
+  {
+    "carrier": "DHL",
+    "postal_prefix": "",
+    "min_weight": 51.0001,
+    "max_weight": 52,
+    "flat_price": 49.40649999999998,
+    "price_per_kg": null
+  },
+  {
+    "carrier": "DHL",
+    "postal_prefix": "",
+    "min_weight": 52.0001,
+    "max_weight": 53,
+    "flat_price": 50.04999999999998,
+    "price_per_kg": null
+  },
+  {
+    "carrier": "DHL",
+    "postal_prefix": "",
+    "min_weight": 53.0001,
+    "max_weight": 54,
+    "flat_price": 50.69349999999998,
+    "price_per_kg": null
+  },
+  {
+    "carrier": "DHL",
+    "postal_prefix": "",
+    "min_weight": 54.0001,
+    "max_weight": 55,
+    "flat_price": 51.336999999999975,
+    "price_per_kg": null
+  },
+  {
+    "carrier": "DHL",
+    "postal_prefix": "",
+    "min_weight": 55.0001,
+    "max_weight": 56,
+    "flat_price": 51.98049999999997,
+    "price_per_kg": null
+  },
+  {
+    "carrier": "DHL",
+    "postal_prefix": "",
+    "min_weight": 56.0001,
+    "max_weight": 57,
+    "flat_price": 52.62399999999998,
+    "price_per_kg": null
+  },
+  {
+    "carrier": "DHL",
+    "postal_prefix": "",
+    "min_weight": 57.0001,
+    "max_weight": 58,
+    "flat_price": 53.26749999999998,
+    "price_per_kg": null
+  },
+  {
+    "carrier": "DHL",
+    "postal_prefix": "",
+    "min_weight": 58.0001,
+    "max_weight": 59,
+    "flat_price": 53.91099999999997,
+    "price_per_kg": null
+  },
+  {
+    "carrier": "DHL",
+    "postal_prefix": "",
+    "min_weight": 59.0001,
+    "max_weight": 60,
+    "flat_price": 55.98449999999997,
+    "price_per_kg": null
+  },
+  {
+    "carrier": "DHL",
+    "postal_prefix": "",
+    "min_weight": 60.0001,
+    "max_weight": 61,
+    "flat_price": 56.62799999999998,
+    "price_per_kg": null
+  },
+  {
+    "carrier": "DHL",
+    "postal_prefix": "",
+    "min_weight": 61.0001,
+    "max_weight": 62,
+    "flat_price": 57.271499999999975,
+    "price_per_kg": null
+  },
+  {
+    "carrier": "DHL",
+    "postal_prefix": "",
+    "min_weight": 62.0001,
+    "max_weight": 63,
+    "flat_price": 57.91499999999998,
+    "price_per_kg": null
+  },
+  {
+    "carrier": "DHL",
+    "postal_prefix": "",
+    "min_weight": 63.0001,
+    "max_weight": 64,
+    "flat_price": 58.558499999999974,
+    "price_per_kg": null
+  },
+  {
+    "carrier": "DHL",
+    "postal_prefix": "",
+    "min_weight": 64.0001,
+    "max_weight": 65,
+    "flat_price": 59.201999999999984,
+    "price_per_kg": null
+  },
+  {
+    "carrier": "DHL",
+    "postal_prefix": "",
+    "min_weight": 65.0001,
+    "max_weight": 66,
+    "flat_price": 59.84549999999999,
+    "price_per_kg": null
+  },
+  {
+    "carrier": "DHL",
+    "postal_prefix": "",
+    "min_weight": 66.0001,
+    "max_weight": 67,
+    "flat_price": 60.489,
+    "price_per_kg": null
+  },
+  {
+    "carrier": "DHL",
+    "postal_prefix": "",
+    "min_weight": 67.0001,
+    "max_weight": 68,
+    "flat_price": 61.1325,
+    "price_per_kg": null
+  },
+  {
+    "carrier": "DHL",
+    "postal_prefix": "",
+    "min_weight": 68.0001,
+    "max_weight": 69,
+    "flat_price": 61.775999999999996,
+    "price_per_kg": null
+  },
+  {
+    "carrier": "DHL",
+    "postal_prefix": "",
+    "min_weight": 69.0001,
+    "max_weight": 70,
+    "flat_price": 62.4195,
+    "price_per_kg": null
+  },
+  {
+    "carrier": "DHL",
+    "postal_prefix": "",
+    "min_weight": 70.0001,
+    "max_weight": 71,
+    "flat_price": 64.49300000000001,
+    "price_per_kg": null
+  },
+  {
+    "carrier": "DHL",
+    "postal_prefix": "",
+    "min_weight": 71.0001,
+    "max_weight": 72,
+    "flat_price": 65.13650000000001,
+    "price_per_kg": null
+  },
+  {
+    "carrier": "DHL",
+    "postal_prefix": "",
+    "min_weight": 72.0001,
+    "max_weight": 73,
+    "flat_price": 65.78000000000002,
+    "price_per_kg": null
+  },
+  {
+    "carrier": "DHL",
+    "postal_prefix": "",
+    "min_weight": 73.0001,
+    "max_weight": 74,
+    "flat_price": 66.42350000000002,
+    "price_per_kg": null
+  },
+  {
+    "carrier": "DHL",
+    "postal_prefix": "",
+    "min_weight": 74.0001,
+    "max_weight": 75,
+    "flat_price": 67.06700000000002,
+    "price_per_kg": null
+  },
+  {
+    "carrier": "DHL",
+    "postal_prefix": "",
+    "min_weight": 75.0001,
+    "max_weight": 76,
+    "flat_price": 67.71050000000002,
+    "price_per_kg": null
+  },
+  {
+    "carrier": "DHL",
+    "postal_prefix": "",
+    "min_weight": 76.0001,
+    "max_weight": 77,
+    "flat_price": 68.35400000000004,
+    "price_per_kg": null
+  },
+  {
+    "carrier": "DHL",
+    "postal_prefix": "",
+    "min_weight": 77.0001,
+    "max_weight": 78,
+    "flat_price": 68.99750000000004,
+    "price_per_kg": null
+  },
+  {
+    "carrier": "DHL",
+    "postal_prefix": "",
+    "min_weight": 78.0001,
+    "max_weight": 79,
+    "flat_price": 69.64100000000003,
+    "price_per_kg": null
+  },
+  {
+    "carrier": "DHL",
+    "postal_prefix": "",
+    "min_weight": 79.0001,
+    "max_weight": 80,
+    "flat_price": 70.28450000000005,
+    "price_per_kg": null
+  },
+  {
+    "carrier": "DHL",
+    "postal_prefix": "",
+    "min_weight": 80.0001,
+    "max_weight": 81,
+    "flat_price": 72.35800000000005,
+    "price_per_kg": null
+  },
+  {
+    "carrier": "DHL",
+    "postal_prefix": "",
+    "min_weight": 81.0001,
+    "max_weight": 82,
+    "flat_price": 73.00150000000006,
+    "price_per_kg": null
+  },
+  {
+    "carrier": "DHL",
+    "postal_prefix": "",
+    "min_weight": 82.0001,
+    "max_weight": 83,
+    "flat_price": 73.64500000000005,
+    "price_per_kg": null
+  },
+  {
+    "carrier": "DHL",
+    "postal_prefix": "",
+    "min_weight": 83.0001,
+    "max_weight": 84,
+    "flat_price": 74.28850000000006,
+    "price_per_kg": null
+  },
+  {
+    "carrier": "DHL",
+    "postal_prefix": "",
+    "min_weight": 84.0001,
+    "max_weight": 85,
+    "flat_price": 74.93200000000007,
+    "price_per_kg": null
+  },
+  {
+    "carrier": "DHL",
+    "postal_prefix": "",
+    "min_weight": 85.0001,
+    "max_weight": 86,
+    "flat_price": 75.57550000000008,
+    "price_per_kg": null
+  },
+  {
+    "carrier": "DHL",
+    "postal_prefix": "",
+    "min_weight": 86.0001,
+    "max_weight": 87,
+    "flat_price": 76.21900000000008,
+    "price_per_kg": null
+  },
+  {
+    "carrier": "DHL",
+    "postal_prefix": "",
+    "min_weight": 87.0001,
+    "max_weight": 88,
+    "flat_price": 76.86250000000008,
+    "price_per_kg": null
+  },
+  {
+    "carrier": "DHL",
+    "postal_prefix": "",
+    "min_weight": 88.0001,
+    "max_weight": 89,
+    "flat_price": 77.50600000000009,
+    "price_per_kg": null
+  },
+  {
+    "carrier": "DHL",
+    "postal_prefix": "",
+    "min_weight": 89.0001,
+    "max_weight": 90,
+    "flat_price": 78.14950000000009,
+    "price_per_kg": null
+  },
+  {
+    "carrier": "DHL",
+    "postal_prefix": "",
+    "min_weight": 90.0001,
+    "max_weight": 91,
+    "flat_price": 80.2230000000001,
+    "price_per_kg": null
+  },
+  {
+    "carrier": "DHL",
+    "postal_prefix": "",
+    "min_weight": 91.0001,
+    "max_weight": 92,
+    "flat_price": 80.86650000000009,
+    "price_per_kg": null
+  },
+  {
+    "carrier": "DHL",
+    "postal_prefix": "",
+    "min_weight": 92.0001,
+    "max_weight": 93,
+    "flat_price": 81.5100000000001,
+    "price_per_kg": null
+  },
+  {
+    "carrier": "DHL",
+    "postal_prefix": "",
+    "min_weight": 93.0001,
+    "max_weight": 94,
+    "flat_price": 82.15350000000011,
+    "price_per_kg": null
+  },
+  {
+    "carrier": "DHL",
+    "postal_prefix": "",
+    "min_weight": 94.0001,
+    "max_weight": 95,
+    "flat_price": 82.79700000000011,
+    "price_per_kg": null
+  },
+  {
+    "carrier": "DHL",
+    "postal_prefix": "",
+    "min_weight": 95.0001,
+    "max_weight": 96,
+    "flat_price": 83.44050000000011,
+    "price_per_kg": null
+  },
+  {
+    "carrier": "DHL",
+    "postal_prefix": "",
+    "min_weight": 96.0001,
+    "max_weight": 97,
+    "flat_price": 84.08400000000012,
+    "price_per_kg": null
+  },
+  {
+    "carrier": "DHL",
+    "postal_prefix": "",
+    "min_weight": 97.0001,
+    "max_weight": 98,
+    "flat_price": 84.72750000000013,
+    "price_per_kg": null
+  },
+  {
+    "carrier": "DHL",
+    "postal_prefix": "",
+    "min_weight": 98.0001,
+    "max_weight": 99,
+    "flat_price": 85.37100000000014,
+    "price_per_kg": null
+  }
+]
