@@ -1,4 +1,7 @@
 // index.js
+// Supprimer toute variable d'environnement DEBUG ou DEBUG_URL injectée
+delete process.env.DEBUG;
+delete process.env.DEBUG_URL;
 import express from 'express';
 import cors from 'cors';
 import { createClient } from 'redis';
