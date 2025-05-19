@@ -26,14 +26,29 @@ console.log(`Loaded rateGrid with ${rateGrid.length} entries`);
 
 // Helper: find rate
 function findRate(carrier, prefix, weight) {
-  const rules = rateGrid.filter(r => r.carrier === carrier && (!r.postal_prefix || prefix.startsWith(r.postal_prefix)));
+  // Si pas de préfixe, on ne garde que les règles sans postal_prefix
+  let rules = rateGrid.filter(r => r.carrier === carrier);
+  if (prefix) {
+    rules = rules.filter(r =>
+      r.postal_prefix == null || prefix.startsWith(r.postal_prefix)
+    );
+  } else {
+    rules = rules.filter(r => !r.postal_prefix);
+  }
+
+  // Recherche sur la tranche de poids
   for (const r of rules) {
     if (weight >= r.min_weight && weight <= r.max_weight) {
-      return r.flat_price != null ? r.flat_price : weight * (r.price_per_kg || 0);
+      // flat_price contient le prix unitaire pour la tranche
+      return r.flat_price != null
+        ? r.flat_price
+        : weight * (r.price_per_kg || 0);
     }
   }
+  console.warn(`Aucun tarif pour carrier=${carrier}, poids=${weight}`);
   return 0;
 }
+
 
 // Extract postal code
 function extractPostal(addr) {
