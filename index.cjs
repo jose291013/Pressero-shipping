@@ -36,10 +36,8 @@ function findRate(carrier, prefix, weight) {
     rules = rules.filter(r => !r.postal_prefix);
   }
 
-  // Recherche sur la tranche de poids
   for (const r of rules) {
     if (weight >= r.min_weight && weight <= r.max_weight) {
-      // flat_price contient le prix unitaire pour la tranche
       return r.flat_price != null
         ? r.flat_price
         : weight * (r.price_per_kg || 0);
@@ -48,6 +46,7 @@ function findRate(carrier, prefix, weight) {
   console.warn(`Aucun tarif pour carrier=${carrier}, poids=${weight}`);
   return 0;
 }
+
 
 
 // Extract postal code
@@ -125,18 +124,47 @@ const server = http.createServer(async (req, res) => {
       const carrier = 'DHL';
       const prefixLen = 2;
       let totalCost = 0;
-      const packages = list.map(entry => {
-        const qty = entry.qty;
-        const postal = extractPostal(entry.address);
-        const weight = unitWeight ? unitWeight * qty : 0;
-        const prefix = postal.slice(0, prefixLen);
-        const cost = findRate(carrier, prefix, weight);
-        totalCost += cost;
-        return {
-          Package: { ID: null, From: body.packagesinfo[0].from, To: { Postal: postal }, Weight: weight.toFixed(3), WeightUnit:1, PackageCost: cost.toFixed(2), TotalOrderCost: cost.toFixed(2), CurrencyCode:'EUR', Items: [] },
-          CanShip: true, Messages: [], Cost: cost, DaysToDeliver: 2, MISID: null
-        };
-      });
+const breakdown = [];
+
+const packages = list.map(entry => {
+  const qty    = entry.qty;
+  const weight = unitWeight ? unitWeight * qty : 0;
+  const postal = extractPostal(entry.address);
+  const prefix = postal.slice(0, prefixLen);
+
+  const rate = findRate(carrier, prefix, weight);
+  breakdown.push({
+    address:   entry.address,
+    qty,
+    weight:    weight.toFixed(3),
+    unitPrice: rate.toFixed(2),
+    lineCost:  (rate).toFixed(2)
+  });
+  totalCost += rate;
+
+  return {
+    Package: {
+      ID: null,
+      From:    body.packagesinfo[0].from,
+      To:      { Postal: postal },
+      Weight:  weight.toFixed(3),
+      WeightUnit: 1,
+      PackageCost:    rate.toFixed(2),
+      TotalOrderCost: rate.toFixed(2),
+      CurrencyCode:   'EUR',
+      Items:           []
+    },
+    CanShip:       true,
+    Messages:      [],
+    Cost:          rate,
+    DaysToDeliver: 2,
+    MISID:         null
+  };
+});
+
+console.log('💡 Breakdown par adresse :', breakdown);
+console.log(`Total général : ${totalCost.toFixed(2)} EUR`);
+
       res.writeHead(200, { 'Content-Type': 'application/json' });
       return res.end(JSON.stringify({ Carrier: carrier, ServiceCode: 'External', TotalCost: parseFloat(totalCost.toFixed(2)), Messages: [], Packages: packages }));
     } catch (e) {
