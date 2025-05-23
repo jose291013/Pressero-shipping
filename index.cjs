@@ -130,12 +130,7 @@ const server = http.createServer(async (req, res) => {
 
     const distributionList = JSON.parse(raw);
 
-/* — Calculs optionnels (totaux + prix indicatif) — */
-// 1) on regarde si le front a passé ?tw= & ?tq=
-const urlTW = parseFloat(url.searchParams.get('tw') || '0');   // ex. 47.157
-const urlTQ = parseInt(url.searchParams.get('tq')  || '0', 10); // ex. 1750
 
-// 2) sinon on replie sur les données de la liste
 /* — Calculs optionnels (totaux + prix indicatif) — */
 // valeurs passées par l’URL (page shipping) : ?tw= & ?tq=
 const urlTW = parseFloat(url.searchParams.get('tw') || '0');   // p.ex. 47.157
