@@ -102,6 +102,7 @@ const server = http.createServer(async (req, res) => {
 
       await redis.set(`dist:${distKey}`,
                       JSON.stringify(distributionList),
+                      JSON.stringify({ distributionList, totalQty, totalWeight }),
                       { EX: 60 * 60 * 2 }); // 2 h
 
       res.writeHead(200, { 'Content-Type': 'application/json' });
@@ -160,43 +161,37 @@ return res.end(JSON.stringify({
       const body = await parseJSON(req);
       console.log('Webhook body:', body);
 
-      // 1) Récupération de la liste
-      let list = [];
-      if (body.distKey) {
-        const stored = await redis.get(`dist:${body.distKey}`);
-        list = stored ? JSON.parse(stored) : [];
-      }
-      if (!list.length && Array.isArray(body.packagesinfo)) {
-// aucune distribution => on prend l’adresse “To” par défaut
-   const defaultAddr = body.packagesinfo[0].to;
-   const qtyDefault  = parseInt(body.hdnTotalQty || '1', 10);
-   list = [{ address: defaultAddr, qty: qtyDefault }];
- }
+      /* ───────── 1) Récupération distribution + totaux depuis Redis ───────── */
+let list        = [];
+let totalWeight = 0;          // kg
+let totalQty    = 0;          // pcs
 
-      // 2) Poids unitaire
-      /***** 2) totaux & poids unitaire ****************************************/
-/*  Les deux Order Attributes invisibles créés dans Pressero :
-      TotalWeight → [0].CustomFormFields[1].Val
-      TotalQty    → [0].CustomFormFields[2].Val                       */
-function getCF(idx) {
-  return (body[`[0].CustomFormFields[${idx}].Val`] || '').trim();
+if (body.distKey) {
+  const raw = await redis.get(`dist:${body.distKey}`);      // dist:clé → JSON
+  if (raw) {
+    const stored       = JSON.parse(raw);
+    list               = stored.distributionList || [];
+    totalWeight        = parseFloat(stored.totalWeight || 0);
+    totalQty           = parseInt(stored.totalQty || 0, 10);
+  }
 }
 
-const cfWeight = parseFloat(getCF(1) || '0');        // ex. 47.157 kg
-const cfQty    = parseInt(  getCF(2) || '0', 10);    // ex. 1750 pcs
+/* Si toujours pas de liste (clé inconnue) : on prend l’adresse “To” */
+if (!list.length && Array.isArray(body.packagesinfo)) {
+  const defAddr   = body.packagesinfo[0].to;
+  const qtyByDef  = totalQty || 1;        // 1 pièce si rien n’a été envoyé
+  list = [{ address: defAddr, qty: qtyByDef }];
+}
 
-/*  Poids total que Pressero met parfois dans packagesinfo[0].Weight
-    (backup si les CustomFields sont vides)                         */
-const presWeight = parseFloat(body.packagesinfo?.[0]?.weight || '0');
+/* Si le poids total reste à 0 : utilisez celui donné par Pressero */
+if (!totalWeight) {
+  totalWeight = parseFloat(body.packagesinfo?.[0]?.weight || 0);
+}
 
-/*  Totaux définitifs */
-const totalQty    = cfQty || list.reduce((s, l) => s + l.qty, 0);
-const totalWeight = cfWeight || presWeight;
+/* ───────── 2) Poids unitaire ───────── */
+const unitWeight = totalQty ? totalWeight / totalQty : 0;   // kg / pièce
+console.log({ totalWeight, totalQty, unitWeight });         // DEBUG
 
-/*  Poids unitaire de l’article */
-const unitWeight  = totalQty ? totalWeight / totalQty : 0;       // 0,026947 kg
-
-console.log({ totalWeight, totalQty, unitWeight });              // DEBUG
 /*****************************************************************/
 
 
