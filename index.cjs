@@ -136,12 +136,18 @@ const urlTW = parseFloat(url.searchParams.get('tw') || '0');   // ex. 47.157
 const urlTQ = parseInt(url.searchParams.get('tq')  || '0', 10); // ex. 1750
 
 // 2) sinon on replie sur les données de la liste
-const totalQty    = urlTQ || distributionList.reduce((s, l) => s + l.qty, 0);
-const totalWeight = urlTW || 0;                                // 0 si non fourni
+/* — Calculs optionnels (totaux + prix indicatif) — */
+// valeurs passées par l’URL (page shipping) : ?tw= & ?tq=
+const urlTW = parseFloat(url.searchParams.get('tw') || '0');   // p.ex. 47.157
+const urlTQ = parseInt(url.searchParams.get('tq') || '0', 10); // p.ex. 1750
 
-// 3) calcul poids unitaire et prix
-const unitWeight  = totalQty ? totalWeight / totalQty : 0;     // 0,02694 kg
-const price       = +(totalWeight * 2.3).toFixed(2);           // exemple €/kg
+// sinon, retombe sur les quantités de la liste
+const totalQty    = urlTQ || distributionList.reduce((s, l) => s + l.qty, 0);
+const totalWeight = urlTW || 0;                                // 0 si absent
+
+const unitWeight  = totalQty ? totalWeight / totalQty : 0;     // 0,026947…
+const price       = +(totalWeight * 2.3).toFixed(2);           // tarif indicatif
+
 
 res.writeHead(200, { 'Content-Type': 'application/json' });
 return res.end(JSON.stringify({
@@ -173,9 +179,31 @@ return res.end(JSON.stringify({
  }
 
       // 2) Poids unitaire
-      const totalQty    = parseInt(body.hdnTotalQty    || '0', 10);
- const totalWeight = parseFloat(body.hdnTotalWeight || '0');
- const unitWeight  = totalQty ? totalWeight / totalQty : 0;   // 0,026946…
+      /***** 2) totaux & poids unitaire ****************************************/
+/*  Les deux Order Attributes invisibles créés dans Pressero :
+      TotalWeight → [0].CustomFormFields[1].Val
+      TotalQty    → [0].CustomFormFields[2].Val                       */
+function getCF(idx) {
+  return (body[`[0].CustomFormFields[${idx}].Val`] || '').trim();
+}
+
+const cfWeight = parseFloat(getCF(1) || '0');        // ex. 47.157 kg
+const cfQty    = parseInt(  getCF(2) || '0', 10);    // ex. 1750 pcs
+
+/*  Poids total que Pressero met parfois dans packagesinfo[0].Weight
+    (backup si les CustomFields sont vides)                         */
+const presWeight = parseFloat(body.packagesinfo?.[0]?.Weight || '0');
+
+/*  Totaux définitifs */
+const totalQty    = cfQty || list.reduce((s, l) => s + l.qty, 0);
+const totalWeight = cfWeight || presWeight;
+
+/*  Poids unitaire de l’article */
+const unitWeight  = totalQty ? totalWeight / totalQty : 0;       // 0,026947 kg
+
+console.log({ totalWeight, totalQty, unitWeight });              // DEBUG
+/*****************************************************************/
+
 
       // 3) Calcul tarif
       const carrier   = 'DHL';
