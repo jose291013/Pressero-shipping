@@ -130,16 +130,27 @@ const server = http.createServer(async (req, res) => {
 
     const distributionList = JSON.parse(raw);
 
-    /* — Calculs optionnels (totaux + prix indicatif) — */
-    const totalQty    = distributionList.reduce((s, l) => s + l.qty, 0);
-    const unitWeight  = 0.05;                            // adapte à ton produit
-    const totalWeight = +(totalQty * unitWeight).toFixed(3);
-    const price       = +(totalWeight * 2.3).toFixed(2); // exemple
+/* — Calculs optionnels (totaux + prix indicatif) — */
+// 1) on regarde si le front a passé ?tw= & ?tq=
+const urlTW = parseFloat(url.searchParams.get('tw') || '0');   // ex. 47.157
+const urlTQ = parseInt(url.searchParams.get('tq')  || '0', 10); // ex. 1750
 
-    res.writeHead(200, { 'Content-Type': 'application/json' });
-    return res.end(JSON.stringify({
-      distributionList, totalQty, totalWeight, price
-    }));
+// 2) sinon on replie sur les données de la liste
+const totalQty    = urlTQ || distributionList.reduce((s, l) => s + l.qty, 0);
+const totalWeight = urlTW || 0;                                // 0 si non fourni
+
+// 3) calcul poids unitaire et prix
+const unitWeight  = totalQty ? totalWeight / totalQty : 0;     // 0,02694 kg
+const price       = +(totalWeight * 2.3).toFixed(2);           // exemple €/kg
+
+res.writeHead(200, { 'Content-Type': 'application/json' });
+return res.end(JSON.stringify({
+  distributionList,
+  totalQty,
+  totalWeight,
+  unitWeight: +unitWeight.toFixed(6),
+  price
+}));
   }
 
   /* —— POST /webhook  (appelé par Pressero) ————————— */
@@ -155,15 +166,16 @@ const server = http.createServer(async (req, res) => {
         list = stored ? JSON.parse(stored) : [];
       }
       if (!list.length && Array.isArray(body.packagesinfo)) {
-        list = [{ address: body.packagesinfo[0].to, qty: 1 }];
-      }
+// aucune distribution => on prend l’adresse “To” par défaut
+   const defaultAddr = body.packagesinfo[0].to;
+   const qtyDefault  = parseInt(body.hdnTotalQty || '1', 10);
+   list = [{ address: defaultAddr, qty: qtyDefault }];
+ }
 
       // 2) Poids unitaire
-      let unitWeight = null;
-      if (body.hdnTotalWeight && body.hdnTotalQty) {
-        unitWeight = parseFloat(body.hdnTotalWeight) /
-                     parseInt(body.hdnTotalQty, 10);
-      }
+      const totalQty    = parseInt(body.hdnTotalQty    || '0', 10);
+ const totalWeight = parseFloat(body.hdnTotalWeight || '0');
+ const unitWeight  = totalQty ? totalWeight / totalQty : 0;   // 0,026946…
 
       // 3) Calcul tarif
       const carrier   = 'DHL';
@@ -171,7 +183,7 @@ const server = http.createServer(async (req, res) => {
       let totalCost   = 0;
       const packages  = list.map(entry => {
         const qty     = entry.qty;
-        const weight  = unitWeight ? unitWeight * qty : 0;
+        const weight  = +(unitWeight * qty).toFixed(3);
         const postal  = extractPostal(entry.address);
         const prefix  = postal.slice(0, prefixLen);
 
