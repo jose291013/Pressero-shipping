@@ -1,33 +1,37 @@
 // index.cjs
-// Serveur HTTP natif sans Express pour éviter les erreurs path-to-regexp
+// ────────────────────────────────────────────────────────────────────
+//  Petit service HTTP + Redis pour gestion des listes de distribution
+//  et calcul de tarifs de transport (sans Express.js)
+// ────────────────────────────────────────────────────────────────────
 
-// Supprimer DEBUG_URL si présent
 delete process.env.DEBUG;
 delete process.env.DEBUG_URL;
 
-typeof require === 'function';
-const http = require('http');
+const http          = require('http');
 const { createClient } = require('redis');
-const fs = require('fs');
-const path = require('path');
+const fs            = require('fs');
+const path          = require('path');
+const { URL }       = require('url');
 
-const PORT = process.env.PORT || 3000;
+const PORT      = process.env.PORT || 3000;
 const REDIS_URL = process.env.REDIS_URL;
 
-// Initialisation Redis
+/* ───────────── 1. Redis ───────────── */
 const redis = createClient({ url: REDIS_URL });
 redis.on('error', err => console.error('Redis error', err));
-redis.connect().then(() => console.log('Connected to Redis')).catch(console.error);
+redis.connect()
+     .then(() => console.log('✅ Connected to Redis'))
+     .catch(console.error);
 
-// Charger rateGrid.json
+/* ───────────── 2. Tableau de tarifs ───────────── */
 const gridData = fs.readFileSync(path.join(__dirname, 'rateGrid.json'), 'utf8');
 const rateGrid = JSON.parse(gridData);
-console.log(`Loaded rateGrid with ${rateGrid.length} entries`);
+console.log(`✅ Loaded rateGrid with ${rateGrid.length} entries`);
 
-// Helper: find rate
+/* ───────────── 3. Helpers ───────────── */
 function findRate(carrier, prefix, weight) {
-  // Si pas de préfixe, on ne garde que les règles sans postal_prefix
   let rules = rateGrid.filter(r => r.carrier === carrier);
+
   if (prefix) {
     rules = rules.filter(r =>
       r.postal_prefix == null || prefix.startsWith(r.postal_prefix)
@@ -43,13 +47,10 @@ function findRate(carrier, prefix, weight) {
         : weight * (r.price_per_kg || 0);
     }
   }
-  console.warn(`Aucun tarif pour carrier=${carrier}, poids=${weight}`);
+  console.warn(`No rate for carrier=${carrier}, weight=${weight}`);
   return 0;
 }
 
-
-
-// Extract postal code
 function extractPostal(addr) {
   if (typeof addr === 'string') {
     const m = addr.match(/\b(\d{5})\b/);
@@ -58,15 +59,14 @@ function extractPostal(addr) {
   return addr?.postal || '';
 }
 
-// CORS headers
 function setCors(res) {
-  res.setHeader('Access-Control-Allow-Origin', 'https://decoration.ams.v6.pressero.com');
+  res.setHeader('Access-Control-Allow-Origin',
+                'https://decoration.ams.v6.pressero.com');
   res.setHeader('Access-Control-Allow-Methods', 'GET,POST,OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
   res.setHeader('Access-Control-Allow-Credentials', 'true');
 }
 
-// Read JSON body
 function parseJSON(req) {
   return new Promise((resolve, reject) => {
     let body = '';
@@ -78,7 +78,7 @@ function parseJSON(req) {
   });
 }
 
-// Server
+/* ───────────── 4. Serveur HTTP ───────────── */
 const server = http.createServer(async (req, res) => {
   setCors(res);
   if (req.method === 'OPTIONS') {
@@ -86,17 +86,24 @@ const server = http.createServer(async (req, res) => {
     return res.end();
   }
 
+  /* —— Home ——————————————————————————————— */
   if (req.method === 'GET' && req.url === '/') {
     res.writeHead(200, { 'Content-Type': 'text/plain' });
     return res.end('Service shipping opérationnel');
   }
 
+  /* —— POST /save-distribution ————————————————— */
   if (req.method === 'POST' && req.url === '/save-distribution') {
     try {
       const { distKey, distributionList } = await parseJSON(req);
-      console.log('save-distribution body:', distributionList.length);
-      if (!distKey || !Array.isArray(distributionList)) throw new Error('Invalid payload');
-      await redis.set(`dist:${distKey}`, JSON.stringify(distributionList), { EX: 7200 });
+      if (!distKey || !Array.isArray(distributionList)) {
+        throw new Error('Invalid payload');
+      }
+
+      await redis.set(`dist:${distKey}`,
+                      JSON.stringify(distributionList),
+                      { EX: 60 * 60 * 2 }); // 2 h
+
       res.writeHead(200, { 'Content-Type': 'application/json' });
       return res.end(JSON.stringify({ status: 'ok', distKey }));
     } catch (e) {
@@ -105,10 +112,43 @@ const server = http.createServer(async (req, res) => {
     }
   }
 
+  /* —— GET /get-distribution?distKey=... ——————————— */
+  if (req.method === 'GET' && req.url.startsWith('/get-distribution')) {
+    const url = new URL(req.url, `http://${req.headers.host}`);
+    const distKey = url.searchParams.get('distKey');
+
+    if (!distKey) {
+      res.writeHead(400, { 'Content-Type': 'application/json' });
+      return res.end(JSON.stringify({ error: 'distKey manquant' }));
+    }
+
+    const raw = await redis.get(`dist:${distKey}`);
+    if (!raw) {
+      res.writeHead(404, { 'Content-Type': 'application/json' });
+      return res.end(JSON.stringify({ error: 'Unknown distKey' }));
+    }
+
+    const distributionList = JSON.parse(raw);
+
+    /* — Calculs optionnels (totaux + prix indicatif) — */
+    const totalQty    = distributionList.reduce((s, l) => s + l.qty, 0);
+    const unitWeight  = 0.05;                            // adapte à ton produit
+    const totalWeight = +(totalQty * unitWeight).toFixed(3);
+    const price       = +(totalWeight * 2.3).toFixed(2); // exemple
+
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    return res.end(JSON.stringify({
+      distributionList, totalQty, totalWeight, price
+    }));
+  }
+
+  /* —— POST /webhook  (appelé par Pressero) ————————— */
   if (req.method === 'POST' && req.url === '/webhook') {
     try {
       const body = await parseJSON(req);
       console.log('Webhook body:', body);
+
+      // 1) Récupération de la liste
       let list = [];
       if (body.distKey) {
         const stored = await redis.get(`dist:${body.distKey}`);
@@ -117,64 +157,65 @@ const server = http.createServer(async (req, res) => {
       if (!list.length && Array.isArray(body.packagesinfo)) {
         list = [{ address: body.packagesinfo[0].to, qty: 1 }];
       }
+
+      // 2) Poids unitaire
       let unitWeight = null;
       if (body.hdnTotalWeight && body.hdnTotalQty) {
-        unitWeight = parseFloat(body.hdnTotalWeight) / parseInt(body.hdnTotalQty, 10);
+        unitWeight = parseFloat(body.hdnTotalWeight) /
+                     parseInt(body.hdnTotalQty, 10);
       }
-      const carrier = 'DHL';
+
+      // 3) Calcul tarif
+      const carrier   = 'DHL';
       const prefixLen = 2;
-      let totalCost = 0;
-const breakdown = [];
+      let totalCost   = 0;
+      const packages  = list.map(entry => {
+        const qty     = entry.qty;
+        const weight  = unitWeight ? unitWeight * qty : 0;
+        const postal  = extractPostal(entry.address);
+        const prefix  = postal.slice(0, prefixLen);
 
-const packages = list.map(entry => {
-  const qty    = entry.qty;
-  const weight = unitWeight ? unitWeight * qty : 0;
-  const postal = extractPostal(entry.address);
-  const prefix = postal.slice(0, prefixLen);
+        const rate    = findRate(carrier, prefix, weight);
+        totalCost    += rate;
 
-  const rate = findRate(carrier, prefix, weight);
-  breakdown.push({
-    address:   entry.address,
-    qty,
-    weight:    weight.toFixed(3),
-    unitPrice: rate.toFixed(2),
-    lineCost:  (rate).toFixed(2)
-  });
-  totalCost += rate;
-
-  return {
-    Package: {
-      ID: null,
-      From:    body.packagesinfo[0].from,
-      To:      { Postal: postal },
-      Weight:  weight.toFixed(3),
-      WeightUnit: 1,
-      PackageCost:    rate.toFixed(2),
-      TotalOrderCost: rate.toFixed(2),
-      CurrencyCode:   'EUR',
-      Items:           []
-    },
-    CanShip:       true,
-    Messages:      [],
-    Cost:          rate,
-    DaysToDeliver: 2,
-    MISID:         null
-  };
-});
-
-console.log('💡 Breakdown par adresse :', breakdown);
-console.log(`Total général : ${totalCost.toFixed(2)} EUR`);
+        return {
+          Package: {
+            ID: null,
+            From:    body.packagesinfo[0].from,
+            To:      { Postal: postal },
+            Weight:  weight.toFixed(3),
+            WeightUnit: 1,
+            PackageCost:    rate.toFixed(2),
+            TotalOrderCost: rate.toFixed(2),
+            CurrencyCode:   'EUR',
+            Items:          []
+          },
+          CanShip:       true,
+          Messages:      [],
+          Cost:          rate,
+          DaysToDeliver: 2,
+          MISID:         null
+        };
+      });
 
       res.writeHead(200, { 'Content-Type': 'application/json' });
-      return res.end(JSON.stringify({ Carrier: carrier, ServiceCode: 'External', TotalCost: parseFloat(totalCost.toFixed(2)), Messages: [], Packages: packages }));
+      return res.end(JSON.stringify({
+        Carrier: carrier,
+        ServiceCode: 'External',
+        TotalCost: parseFloat(totalCost.toFixed(2)),
+        Messages: [],
+        Packages: packages
+      }));
     } catch (e) {
       res.writeHead(500, { 'Content-Type': 'application/json' });
       return res.end(JSON.stringify({ error: e.message }));
     }
   }
 
+  /* —— 404 Fallback —————————————————————————— */
   res.writeHead(404, { 'Content-Type': 'text/plain' });
   res.end('Not Found');
 });
 
-server.listen(PORT, () => console.log(`Listening on port ${PORT}`));
+/* ───────────── 5. Démarrage ───────────── */
+server.listen(PORT, () => console.log(`🚀 Listening on port ${PORT}`));
