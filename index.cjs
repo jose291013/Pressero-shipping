@@ -187,7 +187,7 @@ const cfQty    = parseInt(  getCF(2) || '0', 10);    // ex. 1750 pcs
 
 /*  Poids total que Pressero met parfois dans packagesinfo[0].Weight
     (backup si les CustomFields sont vides)                         */
-const presWeight = parseFloat(body.packagesinfo?.[0]?.Weight || '0');
+const presWeight = parseFloat(body.packagesinfo?.[0]?.weight || '0');
 
 /*  Totaux définitifs */
 const totalQty    = cfQty || list.reduce((s, l) => s + l.qty, 0);
