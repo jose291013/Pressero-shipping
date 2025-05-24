@@ -57,10 +57,14 @@ function extractPostal(addr) {
   return addr?.postal || '';
 }
 
-function setCors(res) {
-  res.setHeader('Access-Control-Allow-Origin', '*');
+function setCors(req, res) {
+  const origin = req.headers.origin || '';
+  // si vous voulez restreindre aux domaines Pressero, vérifiez origin ici
+  res.setHeader('Access-Control-Allow-Origin', origin);
   res.setHeader('Access-Control-Allow-Methods', 'GET,POST,OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  // retirez cette ligne si vous n’avez pas besoin d’envoyer les cookies
+  // ou ne la laissez que si vous echoiez origin explicitement
   res.setHeader('Access-Control-Allow-Credentials', 'true');
 }
 
@@ -77,7 +81,7 @@ function parseJSON(req) {
 
 /* ───────────── 4. Serveur HTTP ───────────── */
 const server = http.createServer(async (req, res) => {
-  setCors(res);
+  setCors(req, res);
   if (req.method === 'OPTIONS') {
     res.writeHead(204);
     return res.end();
