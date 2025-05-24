@@ -163,12 +163,16 @@ const server = http.createServer(async (req, res) => {
       price:      parseFloat(totalCost.toFixed(2))
     }));
   
-  } catch (e) {
-    console.error('❌ Erreur webhook:', e);
-    res.writeHead(500, { 'Content-Type': 'application/json' });
-    return res.end(JSON.stringify({ error: e.message }));
-  }
+      return res.end(JSON.stringify({
+      distributionList,
+      totalQty,
+      totalWeight,
+      unitWeight: +unitWeight.toFixed(6),
+      price:      parseFloat(totalCost.toFixed(2))
+    }));
 }
+
+
 
 
   /* —— 404 Fallback —————————————————————————— */
