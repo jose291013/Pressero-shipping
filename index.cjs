@@ -153,97 +153,87 @@ return res.end(JSON.stringify({
   }
 
   /* —— POST /webhook  (appelé par Pressero) ————————— */
-  if (req.method === 'POST' && req.url === '/webhook') {
-    try {
-      const body = await parseJSON(req);
-      console.log('Webhook body:', body);
+  // —— POST /webhook (calcul des frais multiadresse) —————————
+if (req.method === 'POST' && req.url === '/webhook') {
+  try {
+    const body = await parseJSON(req);
+    console.log('Webhook body:', body);
 
-      // 1) Récupération de la liste
-      let list = [];
-      if (body.distKey) {
-        const stored = await redis.get(`dist:${body.distKey}`);
-        list = stored ? JSON.parse(stored) : [];
-      }
-      if (!list.length && Array.isArray(body.packagesinfo)) {
-// aucune distribution => on prend l’adresse “To” par défaut
-   const defaultAddr = body.packagesinfo[0].to;
-   const qtyDefault  = parseInt(body.hdnTotalQty || '1', 10);
-   list = [{ address: defaultAddr, qty: qtyDefault }];
- }
+    // 1) Récupération de la liste depuis Redis
+    let list = [];
+    if (body.distKey) {
+      const stored = await redis.get(`dist:${body.distKey}`);
+      list = stored ? JSON.parse(stored) : [];
+    }
+    // fallback si pas de liste
+    if (!list.length && Array.isArray(body.packagesinfo)) {
+      const defaultAddr = body.packagesinfo[0].to;
+      const qtyDefault  = parseInt(body.hdnTotalQty || '1', 10);
+      list = [{ address: defaultAddr, qty: qtyDefault }];
+    }
 
-      // 2) Poids unitaire
-      /***** 2) totaux & poids unitaire ****************************************/
-/*  Les deux Order Attributes invisibles créés dans Pressero :
-      TotalWeight → [0].CustomFormFields[1].Val
-      TotalQty    → [0].CustomFormFields[2].Val                       */
-function getCF(idx) {
-  return (body[`[0].CustomFormFields[${idx}].Val`] || '').trim();
+    // 2) Totaux et poids unitaire
+    // tu peux aussi passer totalWeight/totalQty via CustomFormFields 1 & 2
+    // ici on récupère dans body.hdnTotalWeight et body.hdnTotalQty
+    const totalWeight = parseFloat(body.hdnTotalWeight || body.packagesinfo[0].weight || '0');
+    const totalQty    = parseInt(body.hdnTotalQty || list.reduce((s, l) => s + l.qty, 0), 10);
+    const unitWeight  = totalQty ? (totalWeight / totalQty) : 0;
+
+    console.log({ totalWeight, totalQty, unitWeight });
+
+    // 3) Calcul du tarif pour chaque adresse
+    const carrier   = 'DHL';
+    const prefixLen = 2;
+    let totalCost   = 0;
+
+    const packages = list.map(entry => {
+      const qty    = entry.qty;
+      const weight = +(unitWeight * qty).toFixed(3);
+      const postal = extractPostal(entry.address);
+      const prefix = postal.slice(0, prefixLen);
+
+      const rate = findRate(carrier, prefix, weight);
+      totalCost += rate;
+
+      return {
+        Package: {
+          ID:           null,
+          From:         body.packagesinfo[0].from,
+          To:           { Postal: postal },
+          Weight:       weight.toFixed(3),
+          WeightUnit:   1,
+          PackageCost:  rate.toFixed(2),
+          TotalOrderCost: rate.toFixed(2),
+          CurrencyCode: 'EUR',
+          Items:        []
+        },
+        CanShip:       true,
+        Messages:      [],
+        Cost:          rate,
+        DaysToDeliver: 2,
+        MISID:         null
+      };
+    });
+
+    console.log('💼 Breakdown par adresse :', packages.map(p=>p.Package));
+
+    // 4) Réponse à Pressero
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    return res.end(JSON.stringify({
+      Carrier:     carrier,
+      ServiceCode: 'External',
+      TotalCost:   parseFloat(totalCost.toFixed(2)),
+      Messages:    [],
+      Packages:    packages
+    }));
+
+  } catch (e) {
+    console.error('❌ Erreur webhook:', e);
+    res.writeHead(500, { 'Content-Type': 'application/json' });
+    return res.end(JSON.stringify({ error: e.message }));
+  }
 }
 
-const cfWeight = parseFloat(getCF(1) || '0');        // ex. 47.157 kg
-const cfQty    = parseInt(  getCF(2) || '0', 10);    // ex. 1750 pcs
-
-/*  Poids total que Pressero met parfois dans packagesinfo[0].Weight
-    (backup si les CustomFields sont vides)                         */
-const presWeight = parseFloat(body.packagesinfo?.[0]?.Weight || '0');
-
-/*  Totaux définitifs */
-const totalQty    = cfQty || list.reduce((s, l) => s + l.qty, 0);
-const totalWeight = cfWeight || presWeight;
-
-/*  Poids unitaire de l’article */
-const unitWeight  = totalQty ? totalWeight / totalQty : 0;       // 0,026947 kg
-
-console.log({ totalWeight, totalQty, unitWeight });              // DEBUG
-/*****************************************************************/
-
-
-      // 3) Calcul tarif
-      const carrier   = 'DHL';
-      const prefixLen = 2;
-      let totalCost   = 0;
-      const packages  = list.map(entry => {
-        const qty     = entry.qty;
-        const weight  = +(unitWeight * qty).toFixed(3);
-        const postal  = extractPostal(entry.address);
-        const prefix  = postal.slice(0, prefixLen);
-
-        const rate    = findRate(carrier, prefix, weight);
-        totalCost    += rate;
-
-        return {
-          Package: {
-            ID: null,
-            From:    body.packagesinfo[0].from,
-            To:      { Postal: postal },
-            Weight:  weight.toFixed(3),
-            WeightUnit: 1,
-            PackageCost:    rate.toFixed(2),
-            TotalOrderCost: rate.toFixed(2),
-            CurrencyCode:   'EUR',
-            Items:          []
-          },
-          CanShip:       true,
-          Messages:      [],
-          Cost:          rate,
-          DaysToDeliver: 2,
-          MISID:         null
-        };
-      });
-
-      res.writeHead(200, { 'Content-Type': 'application/json' });
-      return res.end(JSON.stringify({
-        Carrier: carrier,
-        ServiceCode: 'External',
-        TotalCost: parseFloat(totalCost.toFixed(2)),
-        Messages: [],
-        Packages: packages
-      }));
-    } catch (e) {
-      res.writeHead(500, { 'Content-Type': 'application/json' });
-      return res.end(JSON.stringify({ error: e.message }));
-    }
-  }
 
   /* —— 404 Fallback —————————————————————————— */
   res.writeHead(404, { 'Content-Type': 'text/plain' });
