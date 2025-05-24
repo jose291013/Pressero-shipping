@@ -131,18 +131,18 @@ const server = http.createServer(async (req, res) => {
 
     const distributionList = JSON.parse(raw);
 
-
 /* — Calculs optionnels (totaux + prix indicatif) — */
-// valeurs passées par l’URL (page shipping) : ?tw= & ?tq=
-const urlTW = parseFloat(url.searchParams.get('tw') || '0');   // p.ex. 47.157
-const urlTQ = parseInt(url.searchParams.get('tq') || '0', 10); // p.ex. 1750
+// 1) valeurs passées par l’URL : ?tw= & ?tq=
+const urlTW = parseFloat(url.searchParams.get('tw') || '0');   // ex. 47.157
+const urlTQ = parseInt(url.searchParams.get('tq') || '0', 10); // ex. 1750
 
-// sinon, retombe sur les quantités de la liste
+// 2) sinon on retombe sur les quantités de la liste
 const totalQty    = urlTQ || distributionList.reduce((s, l) => s + l.qty, 0);
 const totalWeight = urlTW || 0;                                // 0 si absent
 
-const unitWeight  = totalQty ? totalWeight / totalQty : 0;     // 0,026947…
+const unitWeight  = totalQty ? totalWeight / totalQty : 0;     // 0,026947 …
 const price       = +(totalWeight * 2.3).toFixed(2);           // tarif indicatif
+
 
 
 res.writeHead(200, { 'Content-Type': 'application/json' });
@@ -156,91 +156,86 @@ return res.end(JSON.stringify({
   }
 
   /* —— POST /webhook  (appelé par Pressero) ————————— */
-  if (req.method === 'POST' && req.url === '/webhook') {
-    try {
-      const body = await parseJSON(req);
-      console.log('Webhook body:', body);
+  // —— POST /webhook (calcul des frais multiadresse) —————————
+// —— POST /webhook (calcul des frais multiadresse) —————————
+if (req.method === 'POST' && req.url === '/webhook') {
+  try {
+    const body = await parseJSON(req);
+    console.log('Webhook body:', body);
 
-      /* ───────── 1) Récupération distribution + totaux depuis Redis ───────── */
-let list        = [];
-let totalWeight = 0;          // kg
-let totalQty    = 0;          // pcs
+    // 1) Récupération de la liste depuis Redis
+    let list = [];
+    if (body.distKey) {
+      const stored = await redis.get(`dist:${body.distKey}`);
+      list = stored ? JSON.parse(stored) : [];
+    }
+    // fallback si pas de liste
+    if (!list.length && Array.isArray(body.packagesinfo)) {
+      const defaultAddr = body.packagesinfo[0].to;
+      const qtyDefault  = parseInt(body.hdnTotalQty || '1', 10);
+      list = [{ address: defaultAddr, qty: qtyDefault }];
+    }
 
-if (body.distKey) {
-  const raw = await redis.get(`dist:${body.distKey}`);      // dist:clé → JSON
-  if (raw) {
-    const stored       = JSON.parse(raw);
-    list               = stored.distributionList || [];
-    totalWeight        = parseFloat(stored.totalWeight || 0);
-    totalQty           = parseInt(stored.totalQty || 0, 10);
-  }
-}
+    // 2) Totaux et poids unitaire
+    const totalWeight = parseFloat(
+      body.hdnTotalWeight || body.packagesinfo[0].weight || '0'
+    );
+    const totalQty = parseInt(
+      body.hdnTotalQty || list.reduce((s, l) => s + l.qty, 0),
+      10
+    );
+    const unitWeight = totalQty ? totalWeight / totalQty : 0;
+    console.log({ totalWeight, totalQty, unitWeight });
 
-/* Si toujours pas de liste (clé inconnue) : on prend l’adresse “To” */
-if (!list.length && Array.isArray(body.packagesinfo)) {
-  const defAddr   = body.packagesinfo[0].to;
-  const qtyByDef  = totalQty || 1;        // 1 pièce si rien n’a été envoyé
-  list = [{ address: defAddr, qty: qtyByDef }];
-}
+    // 3) Calcul du tarif pour chaque adresse
+    const carrier = 'DHL';
+    const prefixLen = 2;
+    let totalCost = 0;
+    const packages = list.map(entry => {
+      const qty = entry.qty;
+      const weight = +(unitWeight * qty).toFixed(3);
+      const postal = extractPostal(entry.address);
+      const prefix = postal.slice(0, prefixLen);
+      const rate = findRate(carrier, prefix, weight);
+      totalCost += rate;
+      return {
+        Package: {
+          ID: null,
+          From: body.packagesinfo[0].from,
+          To: { Postal: postal },
+          Weight: weight.toFixed(3),
+          WeightUnit: 1,
+          PackageCost: rate.toFixed(2),
+          TotalOrderCost: rate.toFixed(2),
+          CurrencyCode: 'EUR',
+          Items: []
+        },
+        CanShip: true,
+        Messages: [],
+        Cost: rate,
+        DaysToDeliver: 2,
+        MISID: null
+      };
+    });
+    console.log('💼 Breakdown par adresse :', packages.map(p => p.Package));
 
-/* Si le poids total reste à 0 : utilisez celui donné par Pressero */
-if (!totalWeight) {
-  totalWeight = parseFloat(body.packagesinfo?.[0]?.weight || 0);
-}
-
-/* ───────── 2) Poids unitaire ───────── */
-const unitWeight = totalQty ? totalWeight / totalQty : 0;   // kg / pièce
-console.log({ totalWeight, totalQty, unitWeight });         // DEBUG
-
-/*****************************************************************/
-
-
-      // 3) Calcul tarif
-      const carrier   = 'DHL';
-      const prefixLen = 2;
-      let totalCost   = 0;
-      const packages  = list.map(entry => {
-        const qty     = entry.qty;
-        const weight  = +(unitWeight * qty).toFixed(3);
-        const postal  = extractPostal(entry.address);
-        const prefix  = postal.slice(0, prefixLen);
-
-        const rate    = findRate(carrier, prefix, weight);
-        totalCost    += rate;
-
-        return {
-          Package: {
-            ID: null,
-            From:    body.packagesinfo[0].from,
-            To:      { Postal: postal },
-            Weight:  weight.toFixed(3),
-            WeightUnit: 1,
-            PackageCost:    rate.toFixed(2),
-            TotalOrderCost: rate.toFixed(2),
-            CurrencyCode:   'EUR',
-            Items:          []
-          },
-          CanShip:       true,
-          Messages:      [],
-          Cost:          rate,
-          DaysToDeliver: 2,
-          MISID:         null
-        };
-      });
-
-      res.writeHead(200, { 'Content-Type': 'application/json' });
-      return res.end(JSON.stringify({
+    // 4) Réponse
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    return res.end(
+      JSON.stringify({
         Carrier: carrier,
         ServiceCode: 'External',
         TotalCost: parseFloat(totalCost.toFixed(2)),
         Messages: [],
         Packages: packages
-      }));
-    } catch (e) {
-      res.writeHead(500, { 'Content-Type': 'application/json' });
-      return res.end(JSON.stringify({ error: e.message }));
-    }
+      })
+    );
+  } catch (e) {
+    console.error('❌ Erreur webhook:', e);
+    res.writeHead(500, { 'Content-Type': 'application/json' });
+    return res.end(JSON.stringify({ error: e.message }));
   }
+}
 
   /* —— 404 Fallback —————————————————————————— */
   res.writeHead(404, { 'Content-Type': 'text/plain' });
