@@ -130,22 +130,15 @@ const server = http.createServer(async (req, res) => {
 
     const distributionList = JSON.parse(raw);
 
-/* — Calculs optionnels (totaux + prix indicatif) — */
-// 1) on regarde si le front a passé ?tw= & ?tq=
+// 1) valeurs passées par l’URL : ?tw= & ?tq=
 const urlTW = parseFloat(url.searchParams.get('tw') || '0');   // ex. 47.157
-const urlTQ = parseInt(url.searchParams.get('tq')  || '0', 10); // ex. 1750
+const urlTQ = parseInt (url.searchParams.get('tq') || '0', 10); // ex. 1750
 
-// 2) sinon on replie sur les données de la liste
-/* — Calculs optionnels (totaux + prix indicatif) — */
-// valeurs passées par l’URL (page shipping) : ?tw= & ?tq=
-const urlTW = parseFloat(url.searchParams.get('tw') || '0');   // p.ex. 47.157
-const urlTQ = parseInt(url.searchParams.get('tq') || '0', 10); // p.ex. 1750
-
-// sinon, retombe sur les quantités de la liste
+// 2) sinon on retombe sur les quantités de la liste
 const totalQty    = urlTQ || distributionList.reduce((s, l) => s + l.qty, 0);
 const totalWeight = urlTW || 0;                                // 0 si absent
 
-const unitWeight  = totalQty ? totalWeight / totalQty : 0;     // 0,026947…
+const unitWeight  = totalQty ? totalWeight / totalQty : 0;     // 0,026947 …
 const price       = +(totalWeight * 2.3).toFixed(2);           // tarif indicatif
 
 
