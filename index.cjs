@@ -30,24 +30,22 @@ console.log(`✅ Loaded rateGrid with ${rateGrid.length} entries`);
 
 /* ───────────── 3. Helpers ───────────── */
 function findRate(carrier, prefix, weight) {
-  let rules = rateGrid.filter(r => r.carrier === carrier);
-
-  if (prefix) {
-    rules = rules.filter(r =>
-      r.postal_prefix == null || prefix.startsWith(r.postal_prefix)
-    );
-  } else {
-    rules = rules.filter(r => !r.postal_prefix);
+  // on conserve seulement les règles valides pour ce transporteur
+  let rules = rateGrid.filter(r => r.carrier === carrier
+    && (r.postal_prefix == null || (prefix && prefix.startsWith(r.postal_prefix)))
+  );
+  // on garde celles où weight ∈ [min_weight, max_weight]
+  const candidates = rules.filter(r =>
+    weight >= r.min_weight && weight <= r.max_weight
+  );
+  // on choisit la plus spécifique : celle avec le plus grand min_weight
+  const best = candidates.sort((a,b) => b.min_weight - a.min_weight)[0];
+  if (best) {
+    return best.flat_price != null
+      ? best.flat_price
+      : weight * (best.price_per_kg || 0);
   }
-
-  for (const r of rules) {
-    if (weight >= r.min_weight && weight <= r.max_weight) {
-      return r.flat_price != null
-        ? r.flat_price
-        : weight * (r.price_per_kg || 0);
-    }
-  }
-  console.warn(`No rate for carrier=${carrier}, weight=${weight}`);
+  console.warn(`Aucun tarif pour carrier=${carrier}, weight=${weight}`);
   return 0;
 }
 
