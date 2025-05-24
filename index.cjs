@@ -91,23 +91,28 @@ const server = http.createServer(async (req, res) => {
 
   /* —— POST /save-distribution ————————————————— */
   if (req.method === 'POST' && req.url === '/save-distribution') {
-    try {
-      const { distKey, distributionList, totalQty, totalWeight } = await parseJSON(req);
-     if (!distKey || !Array.isArray(distributionList)) throw new Error('Invalid payload');
-     // Enregistre {distributionList, totalQty, totalWeight} en Redis
-    await redis.set(
-       `dist:${distKey}`,
-       JSON.stringify({ distributionList, totalQty, totalWeight }),
-       { EX: 60*60*2 }
-     );
-
-      res.writeHead(200, { 'Content-Type': 'application/json' });
-      return res.end(JSON.stringify({ status: 'ok', distKey }));
-    } catch (e) {
-      res.writeHead(400, { 'Content-Type': 'application/json' });
-      return res.end(JSON.stringify({ error: e.message }));
+  try {
+    const { distKey, distributionList, totalQty, totalWeight } = await parseJSON(req);
+    if (!distKey || !Array.isArray(distributionList)
+        || typeof totalQty !== 'number'
+        || typeof totalWeight !== 'number') {
+      throw new Error('Invalid payload – il manque distKey, distributionList, totalQty ou totalWeight');
     }
+
+    // On stocke TOUT l’objet, pas seulement la liste
+    const payload = { distributionList, totalQty, totalWeight };
+    await redis.set(`dist:${distKey}`,
+                    JSON.stringify(payload),
+                    { EX: 60 * 60 * 2 }); // expiration 2h
+
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    return res.end(JSON.stringify({ status: 'ok', distKey }));
+  } catch (e) {
+    res.writeHead(400, { 'Content-Type': 'application/json' });
+    return res.end(JSON.stringify({ error: e.message }));
   }
+}
+
 
   /* —— GET /get-distribution?distKey=... ——————————— */
   if (req.method === 'GET' && req.url.startsWith('/get-distribution')) {
@@ -143,12 +148,13 @@ const price       = +(totalWeight * 2.3).toFixed(2);           // tarif indicati
 
 res.writeHead(200, { 'Content-Type': 'application/json' });
 return res.end(JSON.stringify({
-  distributionList,
+  distributionList,            // maintenant c’est bien un Array
   totalQty,
   totalWeight,
   unitWeight: +unitWeight.toFixed(6),
   price
 }));
+
   }
 
   /* —— POST /webhook  (appelé par Pressero) ————————— */
