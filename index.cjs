@@ -202,6 +202,84 @@ const server = http.createServer(async (req, res) => {
     Packages:    packages
   }));
 }
+  /* —— POST /webhook  (appelé par Pressero pour construire la dropdown) ————————— */
+  if (req.method === 'POST' && req.url === '/webhook') {
+    try {
+      const body = await parseJSON(req);
+      console.log('Webhook body:', body);
+
+      // 1) on récupère la liste + totaux stockés
+      let list        = [];
+      let totalQty    = 0;
+      let totalWeight = 0;
+      if (body.distKey) {
+        const raw = await redis.get(`dist:${body.distKey}`);
+        if (raw) {
+          const stored = JSON.parse(raw);
+          list        = stored.distributionList  || [];
+          totalQty    = stored.totalQty          || 0;
+          totalWeight = stored.totalWeight       || 0;
+        }
+      }
+
+      // 2) fallback sur la 1ère adresse et poids si pas de liste
+      if (!list.length && Array.isArray(body.packagesinfo)) {
+        totalWeight = parseFloat(body.hdnTotalWeight || body.packagesinfo[0].weight || 0);
+        totalQty    = parseInt(body.hdnTotalQty    || '1', 10);
+        list = [{ address: body.packagesinfo[0].to, qty: totalQty }];
+      }
+
+      // 3) unité de poids
+      const unitWeight = totalQty ? totalWeight / totalQty : 0;
+
+      // 4) calcul du tarif multi-adresses
+      const carrier   = 'DHL';
+      const prefixLen = 2;
+      let totalCost   = 0;
+      const packages = list.map(({ address, qty }) => {
+        const w      = +(unitWeight * qty).toFixed(3);
+        const postal = extractPostal(address);
+        const prefix = postal.slice(0, prefixLen);
+        const rate   = findRate(carrier, prefix, w);
+        totalCost   += rate;
+        return {
+          Package: {
+            ID:            null,
+            From:          body.packagesinfo[0]?.from  || {},
+            To:            { Postal: postal },
+            Weight:        w.toFixed(3),
+            WeightUnit:    1,
+            PackageCost:   rate.toFixed(2),
+            TotalOrderCost:rate.toFixed(2),
+            CurrencyCode:  'EUR',
+            Items:         []
+          },
+          CanShip:       true,
+          Messages:      [],
+          Cost:          rate,
+          DaysToDeliver: 2,
+          MISID:         null
+        };
+      });
+
+      // 5) on renvoie **un tableau** de méthodes (ici une seule méthode « External »)
+      const method = {
+        ServiceName:  'Livraison multi-adresses',
+        ServiceCode:  'External',
+        Carrier:      carrier,
+        TotalCost:    parseFloat(totalCost.toFixed(2)),
+        Messages:     [],
+        Packages:     packages
+      };
+
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      return res.end(JSON.stringify([ method ]));
+    } catch (e) {
+      console.error('❌ Erreur webhook:', e);
+      res.writeHead(500, { 'Content-Type': 'application/json' });
+      return res.end(JSON.stringify({ error: e.message }));
+    }
+  }
 
   /* —— 404 Fallback —————————————————————————— */
   res.writeHead(404, { 'Content-Type': 'text/plain' });
