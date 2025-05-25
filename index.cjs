@@ -207,74 +207,75 @@ if (req.method === 'POST' && req.url === '/webhook') {
   try {
     const body = await parseJSON(req);
 
-    // → 1) récupérer liste + totaux
+    // 1) Récupère liste + totaux
     let list = [], totalQty = 0, totalWeight = 0;
     if (body.distKey) {
       const raw = await redis.get(`dist:${body.distKey}`);
       if (raw) {
-        const stored     = JSON.parse(raw);
-        list              = stored.distributionList  || [];
-        totalQty          = stored.totalQty          || 0;
-        totalWeight       = stored.totalWeight       || 0;
+        const stored    = JSON.parse(raw);
+        list            = stored.distributionList || [];
+        totalQty        = stored.totalQty        || 0;
+        totalWeight     = stored.totalWeight     || 0;
       }
     }
 
-    // → 2) fallback si pas de liste
+    // 2) Fallback si pas de liste
     if (!list.length && Array.isArray(body.packagesinfo)) {
       totalWeight = parseFloat(body.hdnTotalWeight || body.packagesinfo[0].weight || 0);
       totalQty    = parseInt(body.hdnTotalQty    || '1', 10);
       list = [{ address: body.packagesinfo[0].to, qty: totalQty }];
     }
 
-    // → 3) calcul unitaire et total
+    // 3) Calcul unitaire + par ligne
     const unitW = totalQty ? totalWeight / totalQty : 0;
     const carrier = 'DHL', prefixLen = 2;
     let totalCost = 0;
-    const packages = list.map(({address,qty}) => {
+    const packages = list.map(({ address, qty }) => {
       const w      = +(unitW * qty).toFixed(3);
       const postal = extractPostal(address);
       const prefix = postal.slice(0, prefixLen);
       const rate   = findRate(carrier, prefix, w);
       totalCost   += rate;
       return {
-        Package:{
-          ID: null,
-          From: body.packagesinfo[0]?.from || {},
-          To:   {Postal:postal},
-          Weight: w.toFixed(3),
-          WeightUnit:1,
-          PackageCost: rate.toFixed(2),
-          TotalOrderCost: rate.toFixed(2),
-          CurrencyCode:'EUR',
-          Items:[]
+        Package: {
+          ID:            null,
+          From:          body.packagesinfo?.[0]?.from || {},
+          To:            { Postal: postal },
+          Weight:        w.toFixed(3),
+          WeightUnit:    1,
+          PackageCost:   rate.toFixed(2),
+          TotalOrderCost:rate.toFixed(2),
+          CurrencyCode:  'EUR',
+          Items:         []
         },
-        CanShip:true,
-        Messages:[],
-        Cost: rate,
-        DaysToDeliver:2,
-        MISID:null
+        CanShip:       true,
+        Messages:      [],
+        Cost:          rate,
+        DaysToDeliver: 2,
+        MISID:         null
       };
     });
 
-    // → 4) on renvoie **un tableau** d’une seule méthode
+    // 4) **On renvoie un tableau** contenant votre méthode “External”  
     const method = {
-      ServiceName:  'Livraison multi-adresses',
-      ServiceCode:  'External',
+      ServiceName:  'Livraison multi-adresses', // libellé dans le select
+      ServiceCode:  'External',                 // valeur <option>
       Carrier:      carrier,
       TotalCost:    parseFloat(totalCost.toFixed(2)),
       Messages:     [],
       Packages:     packages
     };
 
-    res.writeHead(200, {'Content-Type':'application/json'});
+    res.writeHead(200, { 'Content-Type': 'application/json' });
     return res.end(JSON.stringify([ method ]));
 
   } catch (e) {
     console.error('❌ Erreur webhook:', e);
-    res.writeHead(500, {'Content-Type':'application/json'});
-    return res.end(JSON.stringify({error:e.message}));
+    res.writeHead(500, { 'Content-Type': 'application/json' });
+    return res.end(JSON.stringify({ error: e.message }));
   }
 }
+
 
 
   /* —— 404 Fallback —————————————————————————— */
