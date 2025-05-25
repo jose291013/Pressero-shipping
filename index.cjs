@@ -128,69 +128,80 @@ const server = http.createServer(async (req, res) => {
   const distKey = url.searchParams.get('distKey');
   if (!distKey) {
     res.writeHead(400, {'Content-Type':'application/json'});
-    return res.end(JSON.stringify({error:'distKey manquant'}));
+    return res.end(JSON.stringify({ error:'distKey manquant' }));
   }
 
+  // 1) récupérer le JSON stocké
   const raw = await redis.get(`dist:${distKey}`);
   if (!raw) {
     res.writeHead(404, {'Content-Type':'application/json'});
-    return res.end(JSON.stringify({error:'Unknown distKey'}));
+    return res.end(JSON.stringify({ error:'Unknown distKey' }));
   }
 
-  // ← DÉBALLAGE ICI ↓
+  // 2) reconstituer la liste
   let stored = JSON.parse(raw);
-  // si on a stocké directement le tableau, on le réutilise tel quel
-  // sinon on prend stored.distributionList
   let distributionList = Array.isArray(stored)
-      ? stored
-      : (Array.isArray(stored.distributionList)
-          ? stored.distributionList
-          : []);
+    ? stored
+    : (Array.isArray(stored.distributionList)
+        ? stored.distributionList
+        : []);
 
+  // 3) totaux de poids/qty (fournis en query ou retombée sur la liste)
+  const urlTW = parseFloat(url.searchParams.get('tw') || '0');
+  const urlTQ = parseInt  (url.searchParams.get('tq') || '0', 10);
+  const totalQty    = urlTQ    || distributionList.reduce((s,l)=>s+l.qty, 0);
+  const totalWeight = urlTW    || 0;
+  const unitWeight  = totalQty ? totalWeight/totalQty : 0;
 
-    // 2) Récupère tw/tq (TotalWeight, TotalQty) si passés en query
-    const urlTW = parseFloat(url.searchParams.get('tw') || '0');
-    const urlTQ = parseInt  (url.searchParams.get('tq') || '0', 10);
+  // 4) calcul du tarif pour chaque adresse
+  const carrier   = 'DHL';
+  const prefixLen = 2;
+  let totalCost   = 0;
 
-    // 3) Totaux
-    const totalQty    = urlTQ    || distributionList.reduce((s, l) => s + l.qty, 0);
-    const totalWeight = urlTW    || 0;
-    const unitWeight  = totalQty ? totalWeight / totalQty : 0;
+  // on se base sur le premier élément de packagesinfo (dimensions, etc.)
+  // si besoin d’y glisser les BoxLength/Height/Depth, il faut l’injecter dans stored
+  const template = {}; 
 
-    // 4) Calcul réel du tarif multi-adresse
-    const carrier   = 'DHL';
-    const prefixLen = 2;
-    let totalCost   = 0;
+  const packages = distributionList.map(({ address, qty }) => {
+    const weight = +(unitWeight * qty).toFixed(3);
+    const postal = extractPostal(address);
+    const prefix = postal.slice(0, prefixLen);
+    const rate   = findRate(carrier, prefix, weight);
+    totalCost   += rate;
 
-    for (const entry of distributionList) {
-      const w      = +(unitWeight * entry.qty).toFixed(3);
-      const postal = extractPostal(entry.address);
-      const prefix = postal.slice(0, prefixLen);
-      const rate   = findRate(carrier, prefix, w);
-      totalCost   += rate;
-    }
+    return {
+      Package: {
+        ID:            null,
+        // BoxLength: template.boxlength, // si dispo
+        // BoxHeight: template.boxheight,
+        // BoxDepth:  template.boxdepth,
+        From:          template.from    || {},
+        To:            { Postal: postal },
+        Weight:        weight.toFixed(3),
+        WeightUnit:    1,
+        PackageCost:   rate.toFixed(2),
+        TotalOrderCost:rate.toFixed(2),
+        CurrencyCode:  'EUR',
+        Items:         template.items   || []
+      },
+      CanShip:       true,
+      Messages:      [],
+      Cost:          rate,
+      DaysToDeliver: template.daystodeliver || 0,
+      MISID:         null
+    };
+  });
 
-    // 5) On renvoie la réponse finale
-    res.writeHead(200, { 'Content-Type': 'application/json' });
-    return res.end(JSON.stringify({
-      distributionList,
-      totalQty,
-      totalWeight,
-      unitWeight: +unitWeight.toFixed(6),
-      price:      parseFloat(totalCost.toFixed(2))
-    }));
-  
-      return res.end(JSON.stringify({
-      distributionList,
-      totalQty,
-      totalWeight,
-      unitWeight: +unitWeight.toFixed(6),
-      price:      parseFloat(totalCost.toFixed(2))
-    }));
+  // 5) réponse finale
+  res.writeHead(200, { 'Content-Type': 'application/json' });
+  return res.end(JSON.stringify({
+    Carrier:     carrier,
+    ServiceCode: 'External',
+    TotalCost:   parseFloat(totalCost.toFixed(2)),
+    Messages:    [],
+    Packages:    packages
+  }));
 }
-
-
-
 
   /* —— 404 Fallback —————————————————————————— */
   res.writeHead(404, { 'Content-Type': 'text/plain' });
