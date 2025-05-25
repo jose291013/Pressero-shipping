@@ -124,20 +124,29 @@ const server = http.createServer(async (req, res) => {
 
     /* —— GET /get-distribution?distKey=... ——————————— */
   if (req.method === 'GET' && req.url.startsWith('/get-distribution')) {
-    const url     = new URL(req.url, `http://${req.headers.host}`);
-    const distKey = url.searchParams.get('distKey');
-    if (!distKey) {
-      res.writeHead(400, { 'Content-Type': 'application/json' });
-      return res.end(JSON.stringify({ error: 'distKey manquant' }));
-    }
+  const url     = new URL(req.url, `http://${req.headers.host}`);
+  const distKey = url.searchParams.get('distKey');
+  if (!distKey) {
+    res.writeHead(400, {'Content-Type':'application/json'});
+    return res.end(JSON.stringify({error:'distKey manquant'}));
+  }
 
-    // 1) Va chercher la liste enregistrée
-    const raw = await redis.get(`dist:${distKey}`);
-    if (!raw) {
-      res.writeHead(404, { 'Content-Type': 'application/json' });
-      return res.end(JSON.stringify({ error: 'Unknown distKey' }));
-    }
-    const distributionList = JSON.parse(raw);
+  const raw = await redis.get(`dist:${distKey}`);
+  if (!raw) {
+    res.writeHead(404, {'Content-Type':'application/json'});
+    return res.end(JSON.stringify({error:'Unknown distKey'}));
+  }
+
+  // ← DÉBALLAGE ICI ↓
+  let stored = JSON.parse(raw);
+  // si on a stocké directement le tableau, on le réutilise tel quel
+  // sinon on prend stored.distributionList
+  let distributionList = Array.isArray(stored)
+      ? stored
+      : (Array.isArray(stored.distributionList)
+          ? stored.distributionList
+          : []);
+
 
     // 2) Récupère tw/tq (TotalWeight, TotalQty) si passés en query
     const urlTW = parseFloat(url.searchParams.get('tw') || '0');
