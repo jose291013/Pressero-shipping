@@ -258,7 +258,7 @@ if (req.method === 'POST' && req.url === '/webhook') {
 
     // 4) **On renvoie un tableau** contenant votre méthode “External”  
     const method = {
-      ServiceName:  'External', // libellé dans le select
+      ServiceName:  'Livraison test external', // libellé dans le select
       ServiceCode:  'External',                 // valeur <option>
       Carrier:      carrier,
       TotalCost:    parseFloat(totalCost.toFixed(2)),
